@@ -1,6 +1,6 @@
 tqdm
 numpy
-glob
+glob3
 opencv-python
 colorama
 numba

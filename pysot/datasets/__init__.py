@@ -1,4 +1,4 @@
-from .vot import VOTDataset, VOTLTDataset
+from .vot import VOTDataset, VOTLTDataset, VOTLTRGBDDataset
 from .otb import OTBDataset
 from .uav import UAVDataset
 from .lasot import LaSOTDataset
@@ -32,6 +32,8 @@ class DatasetFactory(object):
             dataset = VOTDataset(**kwargs)
         elif 'VOT2018-LT' == name:
             dataset = VOTLTDataset(**kwargs)
+        elif 'VOT2019-RGBD' == name:
+            dataset = VOTLTRGBDDataset(**kwargs)
         elif 'TrackingNet' == name:
             dataset = TrackingNetDataset(**kwargs)
         elif 'GOT-10k' == name:

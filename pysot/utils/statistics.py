@@ -139,9 +139,9 @@ def determine_thresholds(scores, resolution=100):
 
 @jit(nopython=True)
 def calculate_f1(overlaps, score, bound, thresholds, N):
-    overlaps = np.array(overlaps)
+    #overlaps = np.array(overlaps)
     overlaps[np.isnan(overlaps)] = 0
-    score = np.array(score)
+    #score = np.array(score)
     score[np.isnan(score)] = 0
     precision = np.zeros(len(thresholds))
     recall = np.zeros(len(thresholds))

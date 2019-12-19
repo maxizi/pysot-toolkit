@@ -8,21 +8,11 @@ sys.path.append("./")
 from glob import glob
 from tqdm import tqdm
 from multiprocessing import Pool
-from pysot.datasets import OTBDataset, UAVDataset, LaSOTDataset, VOTDataset, NFSDataset, VOTLTDataset
-from pysot.evaluation import OPEBenchmark, AccuracyRobustnessBenchmark, EAOBenchmark, F1Benchmark
-from pysot.visualization import draw_success_precision, draw_eao, draw_f1
+from pysot_toolkit.pysot.datasets import OTBDataset, UAVDataset, LaSOTDataset, VOTDataset, NFSDataset, VOTLTDataset, VOTLTRGBDDataset
+from pysot_toolkit.pysot.evaluation import OPEBenchmark, AccuracyRobustnessBenchmark, EAOBenchmark, F1Benchmark
+from pysot_toolkit.pysot.visualization import draw_success_precision, draw_eao, draw_f1
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Single Object Tracking Evaluation')
-    parser.add_argument('--dataset_dir', type=str, help='dataset root directory')
-    parser.add_argument('--dataset', type=str, help='dataset name')
-    parser.add_argument('--tracker_result_dir', type=str, help='tracker result root')
-    parser.add_argument('--trackers', nargs='+')
-    parser.add_argument('--vis', dest='vis', action='store_true')
-    parser.add_argument('--show_video_level', dest='show_video_level', action='store_true')
-    parser.add_argument('--num', type=int, help='number of processes to eval', default=1)
-    args = parser.parse_args()
-
+def pysot_eval(args):
     tracker_dir = args.tracker_result_dir
     trackers = args.trackers
     root = args.dataset_dir
@@ -161,3 +151,37 @@ if __name__ == '__main__':
                 show_video_level=args.show_video_level)
         if args.vis:
             draw_f1(f1_result)
+    elif 'VOT2019-RGBD' == args.dataset:
+        dataset = VOTLTRGBDDataset(args.dataset, root, list_file=args.list_file)
+        dataset.set_tracker(tracker_dir, trackers)
+        benchmark = F1Benchmark(dataset)
+        f1_result = {}
+        with Pool(processes=args.num) as pool:
+            for ret in tqdm(pool.imap_unordered(benchmark.eval,
+                trackers), desc='eval f1', total=len(trackers), ncols=100):
+                f1_result.update(ret)
+        
+        #print('''Evaluation of F1 score could be parallelized if multiple 
+        #    trackers shall be evaluated. See eval.py line 159''')
+        #for tracker in trackers:
+        #    f1_result.update(benchmark.eval(tracker))
+
+        benchmark.show_result(f1_result,
+                show_video_level=args.show_video_level)
+        if args.vis:
+            draw_f1(f1_result)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Single Object Tracking Evaluation')
+    parser.add_argument('--dataset_dir', type=str, help='dataset root directory')
+    parser.add_argument('--dataset', type=str, help='dataset name')
+    parser.add_argument('--tracker_result_dir', type=str, help='tracker result root')
+    parser.add_argument('--trackers', nargs='+')
+    parser.add_argument('--vis', dest='vis', action='store_true')
+    parser.add_argument('--show_video_level', dest='show_video_level', action='store_true')
+    parser.add_argument('--num', type=int, help='number of processes to eval', default=1)
+    args = parser.parse_args()
+
+    pysot_eval(args)
+    
