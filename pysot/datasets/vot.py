@@ -101,6 +101,8 @@ class VOTDataset(Dataset):
         with open(os.path.join(dataset_root, name+'.json'), 'r') as f:
             meta_data = json.load(f)
 
+        dataset_root = os.path.join(dataset_root, name)
+
         # load videos
         pbar = tqdm(meta_data.keys(), desc='loading '+name, ncols=100)
         self.videos = {}

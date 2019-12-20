@@ -1,4 +1,4 @@
-from pysot.datasets import VOTLTRGBDDataset
+from pysot_toolkit.pysot.datasets import VOTLTRGBDDataset
 from got_toolkit.got10k.experiments import ExperimentVOT
 
 # Import trackers
