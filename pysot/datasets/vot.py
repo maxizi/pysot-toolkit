@@ -183,22 +183,46 @@ class VOTLTDataset(Dataset):
         dataset_root: dataset root
         load_img: wether to load all imgs
     """
-    def __init__(self, name, dataset_root, load_img=False):
+    def __init__(self, name, dataset_root, load_img=False, list_file=None):
         super(VOTLTDataset, self).__init__(name, dataset_root)
-        with open(os.path.join(dataset_root, name+'.json'), 'r') as f:
-            meta_data = json.load(f)
+
+        #with open(os.path.join(dataset_root, name+'.json'), 'r') as f:
+        #    meta_data = json.load(f)
+        if list_file is None:
+                list_file = os.path.join(dataset_root, 'list.txt')
+        else:
+                list_file = os.path.join(dataset_root, list_file+'.txt')
+
+        with open(list_file, 'r') as f:
+            self.seq_names = f.read().strip().split('\n')
+        self.seq_dirs = [os.path.join(dataset_root, s) for s in self.seq_names]
+        self.anno_files = [os.path.join(s, 'groundtruth.txt')
+                        for s in self.seq_dirs]
 
         # load videos
-        pbar = tqdm(meta_data.keys(), desc='loading '+name, ncols=100)
+        pbar = tqdm(self.seq_dirs, desc='loading '+name+'\n', ncols=100)
         self.videos = {}
-        for video in pbar:
+        for index, video in enumerate(pbar):
             pbar.set_postfix_str(video)
+
+            # make compliant with framework
+            # init_rect
+            with open(self.anno_files[index], 'r') as f:
+                init_rect = f.readline()
+
+            # gt_rects
+            gt_rects = pd.read_csv(self.anno_files[index], sep=',').to_numpy()
+
+            # image files
+            img_files = sorted(glob(
+                os.path.join(self.seq_dirs[index], 'color/*.jpg')))
+
             self.videos[video] = VOTLTVideo(video,
                                           dataset_root,
-                                          meta_data[video]['video_dir'],
-                                          meta_data[video]['init_rect'],
-                                          meta_data[video]['img_names'],
-                                          meta_data[video]['gt_rect'])
+                                          self.seq_dirs[index],
+                                          init_rect,
+                                          img_files,
+                                          gt_rects)
 
 
 class VOTLTRGBDVideo(Video):
