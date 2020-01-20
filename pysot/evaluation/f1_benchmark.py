@@ -1,19 +1,22 @@
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 from glob import glob
 from tqdm import tqdm
 from colorama import Style, Fore
+import json
 
 from ..utils import determine_thresholds, calculate_accuracy, calculate_f1
 
 class F1Benchmark:
-    def __init__(self, dataset):
+    def __init__(self, dataset, report_path=None):
         """
         Args:
             result_path:
         """
         self.dataset = dataset
+        self.report_path = report_path
 
     def eval(self, eval_trackers=None):
         """
@@ -35,6 +38,16 @@ class F1Benchmark:
                                  "recall": recall,
                                  "f1": f1
                                 }
+
+        # save performance
+        report_dir = os.path.join(self.report_path, self.dataset.name, self.dataset.tracker_names[0])
+        if not os.path.exists(report_dir):
+            os.makedirs(report_dir)
+        report_file = os.path.join(report_dir, 'performance_sequence_full.json')
+        with open(report_file, 'w') as f:
+                json.dump(ret, f, indent=4, cls=NumpyEncoder)
+        print('Performance saved at', report_file)
+        
         return ret
 
     def _cal_precision_reall(self, tracker_name):
@@ -83,6 +96,32 @@ class F1Benchmark:
             max_idx = np.argmax(f1)
             sorted_tracker[tracker_name] = (precision[max_idx], recall[max_idx],
                     f1[max_idx])
+            
+            # save performance
+            performance = {}
+            performance.update({tracker_name: {
+                'precision': precision[max_idx],
+                'recall': recall[max_idx],
+                'f1': f1[max_idx]}})
+            report_dir = os.path.join(self.report_path, self.dataset.name, self.dataset.tracker_names[0])
+            if not os.path.exists(report_dir):
+                os.makedirs(report_dir)
+            report_file = os.path.join(report_dir, 'performance_mean.json')
+            with open(report_file, 'w') as f:
+                json.dump(performance, f, indent=4, cls=NumpyEncoder)
+            print('Performance saved at', report_file)
+
+            # make plot
+            plt.figure()
+            plt.plot(recall, precision)
+            plt.xlabel('Recall')
+            plt.ylabel('Precision')
+            plt.xlim([0, 1])
+            plt.ylim([0, 1])
+            plt.grid()
+            plt.savefig(os.path.join(report_dir, 'precision_recall.png'))
+
+
         sorted_tracker_ = sorted(sorted_tracker.items(),
                                  key=lambda x:x[1][2],
                                  reverse=True)[:20]
@@ -122,6 +161,7 @@ class F1Benchmark:
             print('-'*len(header1))
             print(header2)
             print('-'*len(header1))
+            performance_sequences = {}
             videos = list(result[tracker_name]['precision'].keys())
             for video in videos:
                 row = "|{:^14}|".format(video)
@@ -130,6 +170,10 @@ class F1Benchmark:
                     recall = result[tracker_name]['recall'][video]
                     f1 = result[tracker_name]['f1'][video]
                     max_idx = np.argmax(f1)
+                    performance_sequences[video] = ({tracker_name: {
+                        'precision': precision[max_idx],
+                        'recall': recall[max_idx],
+                        'f1': f1[max_idx]}})
                     precision_str = "{:^11.3f}".format(precision[max_idx])
                     if precision[max_idx] < helight_threshold:
                         row += f'{Fore.RED}{precision_str}{Style.RESET_ALL}|'
@@ -147,3 +191,18 @@ class F1Benchmark:
                         row += f1_str+'|'
                 print(row)
             print('-'*len(header1))
+
+            # save performance
+            report_dir = os.path.join(self.report_path, self.dataset.name, self.dataset.tracker_names[0])
+            if not os.path.exists(report_dir):
+                os.makedirs(report_dir)
+            report_file = os.path.join(report_dir, 'performance_sequence.json')
+            with open(report_file, 'w') as f:
+                json.dump(performance_sequences, f, indent=4, cls=NumpyEncoder)
+
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
