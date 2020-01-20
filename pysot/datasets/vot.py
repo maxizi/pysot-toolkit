@@ -160,15 +160,16 @@ class VOTLTVideo(Video):
         if isinstance(tracker_names, str):
             tracker_names = [tracker_names]
         for name in tracker_names:
-            traj_file = os.path.join(path, name, 'longterm',
-                    self.name, self.name+'_001.txt')
+            seq_name = os.path.basename(self.name)
+            traj_file = os.path.join(path, name, 'unsupervised',
+                    seq_name, seq_name+'_001.txt')
             with open(traj_file, 'r') as f:
                 traj = [list(map(float, x.strip().split(',')))
                         for x in f.readlines()]
             if store:
                 self.pred_trajs[name] = traj
-            confidence_file = os.path.join(path, name, 'longterm',
-                    self.name, self.name+'_001_confidence.value')
+            confidence_file = os.path.join(path, name, 'unsupervised',
+                    seq_name, seq_name+'_001_confidence.value')
             with open(confidence_file, 'r') as f:
                 score = [float(x.strip()) for x in f.readlines()[1:]]
                 score.insert(0, float('nan'))

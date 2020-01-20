@@ -43,7 +43,7 @@ class F1Benchmark:
         #     video = self.dataset[i]
         for video in self.dataset:
             if tracker_name not in video.confidence:
-                score = video.load_tracker(self.dataset.tracker_path, tracker_name, False)[1]
+                score += video.load_tracker(self.dataset.tracker_path, tracker_name, False)[1]
             else:
                 score += video.confidence[tracker_name]
         score = np.array(score)
@@ -61,6 +61,7 @@ class F1Benchmark:
             else:
                 tracker_traj = video.pred_trajs[tracker_name]
                 score = video.confidence[tracker_name]
+            score = np.array(score)
             overlaps = calculate_accuracy(tracker_traj, gt_traj, \
                     bound=(video.width,video.height))[1]
             overlaps = np.array(overlaps)
