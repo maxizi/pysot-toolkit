@@ -45,7 +45,7 @@ class F1Benchmark:
             os.makedirs(report_dir)
         report_file = os.path.join(report_dir, 'performance_sequence_full.json')
         with open(report_file, 'w') as f:
-                json.dump(ret, f, indent=4, cls=NumpyEncoder)
+                json.dump(ret[self.dataset.tracker_names[0]], f, indent=4, cls=NumpyEncoder)
         print('Performance saved at', report_file)
         
         return ret
@@ -80,6 +80,9 @@ class F1Benchmark:
             overlaps = np.array(overlaps)
             f1[video.name], precision[video.name], recall[video.name] = \
                     calculate_f1(overlaps, score, (video.width,video.height),thresholds, N)
+            # treat NaN values as zeros (bad performance)
+            f1[video.name][np.isnan(f1[video.name])] = 0
+            
         return precision, recall, f1
 
     def show_result(self, result, show_video_level=False, helight_threshold=0.5):
@@ -97,29 +100,32 @@ class F1Benchmark:
             sorted_tracker[tracker_name] = (precision[max_idx], recall[max_idx],
                     f1[max_idx])
             
-            # save performance
-            performance = {}
-            performance.update({tracker_name: {
-                'precision': precision[max_idx],
-                'recall': recall[max_idx],
-                'f1': f1[max_idx]}})
-            report_dir = os.path.join(self.report_path, self.dataset.name, self.dataset.tracker_names[0])
-            if not os.path.exists(report_dir):
-                os.makedirs(report_dir)
-            report_file = os.path.join(report_dir, 'performance_mean.json')
-            with open(report_file, 'w') as f:
-                json.dump(performance, f, indent=4, cls=NumpyEncoder)
-            print('Performance saved at', report_file)
+            # tracker to be evaluated
+            if tracker_name == self.dataset.tracker_names[0]:
+                # save performance
+                performance = {}
+                performance[tracker_name] = {
+                    'precision': precision[max_idx],
+                    'recall': recall[max_idx],
+                    'f1': f1[max_idx]}
+                report_dir = os.path.join(self.report_path, self.dataset.name, self.dataset.tracker_names[0])
+                if not os.path.exists(report_dir):
+                    os.makedirs(report_dir)
+                report_file = os.path.join(report_dir, 'performance_mean.json')
+                with open(report_file, 'w') as f:
+                    json.dump(performance, f, indent=4, cls=NumpyEncoder)
+                print('Performance saved at', report_file)
 
-            # make plot
-            plt.figure()
-            plt.plot(recall, precision)
-            plt.xlabel('Recall')
-            plt.ylabel('Precision')
-            plt.xlim([0, 1])
-            plt.ylim([0, 1])
-            plt.grid()
-            plt.savefig(os.path.join(report_dir, 'precision_recall.png'))
+                # make plot
+                plt.figure()
+                plt.plot(recall, precision)
+                plt.xlabel('Recall')
+                plt.ylabel('Precision')
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.grid()
+                plt.title(tracker_name)
+                plt.savefig(os.path.join(report_dir, 'precision_recall.png'))
 
 
         sorted_tracker_ = sorted(sorted_tracker.items(),
@@ -170,10 +176,13 @@ class F1Benchmark:
                     recall = result[tracker_name]['recall'][video]
                     f1 = result[tracker_name]['f1'][video]
                     max_idx = np.argmax(f1)
-                    performance_sequences[video] = ({tracker_name: {
-                        'precision': precision[max_idx],
-                        'recall': recall[max_idx],
-                        'f1': f1[max_idx]}})
+
+                    if tracker_name == self.dataset.tracker_names[0]:
+                        performance_sequences[video] = ({tracker_name: {
+                            'precision': precision[max_idx],
+                            'recall': recall[max_idx],
+                            'f1': f1[max_idx]}})
+
                     precision_str = "{:^11.3f}".format(precision[max_idx])
                     if precision[max_idx] < helight_threshold:
                         row += f'{Fore.RED}{precision_str}{Style.RESET_ALL}|'
